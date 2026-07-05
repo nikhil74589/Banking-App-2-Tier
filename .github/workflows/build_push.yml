@@ -1,0 +1,12 @@
+name : Buliding and Pushing to AWS ECR
+
+on:
+   workflow_call:
+
+jobs:
+  working-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name : Echo Message
+        run : echo "Build and push successfully ✅"
