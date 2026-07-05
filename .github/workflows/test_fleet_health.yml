@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 permissions:
-  id-token: write
+ id-token: write
   contents: read
 
 jobs:
@@ -12,47 +12,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::127348474924:role/github-action-deploy-role
           aws-region: us-east-2
 
       - name: Fleet Health Checks
         id: health
+        shell: bash
         run: |
           CMD_ID=$(aws ssm send-command \
             --targets "Key=tag:App,Values=flask" \
             --document-name "AWS-RunShellScript" \
-            --parameters '{"commands":[
-              "hostname -I",
-              "docker --version 2>/dev/null || echo DOCKER NOT INSTALLED",
-              "aws --version 2>/dev/null || echo AWS CLI NOT INSTALLED",
-              "mysql --version 2>/dev/null || echo MYSQL NOT INSTALLED",
-              "aws ssm get-parameters-by-path --path /application/banking --with-decryption --region us-east-2 | grep -E Name"
-            ]}' \
-            --query 'Command.CommandId' \
+            --parameters '{
+              "commands": [
+                "hostname -I",
+                "docker --version 2>/dev/null || echo DOCKER NOT INSTALLED",
+                "aws --version 2>/dev/null || echo AWS CLI NOT INSTALLED",
+                "mysql --version 2>/dev/null || echo MYSQL NOT INSTALLED",
+                "aws ssm get-parameters-by-path --path /application/banking --with-decryption --region us-east-2 | grep -E Name"
+              ]
+            }' \
+            --query "Command.CommandId" \
             --output text \
-            --region us-east-2
-          )
+            --region us-east-2)
 
           echo "cmd_id=$CMD_ID" >> "$GITHUB_OUTPUT"
 
       - name: Show Results
+        shell: bash
         run: |
           sleep 20
 
           aws ssm list-command-invocations \
             --command-id "${{ steps.health.outputs.cmd_id }}" \
             --details \
-            --region us-east-2 \
-            --output text
+            --region us-east-2
 
           FAILED=$(aws ssm list-command-invocations \
             --command-id "${{ steps.health.outputs.cmd_id }}" \
             --query "length(CommandInvocations[?Status=='Failed'])" \
             --output text \
-            --region us-east-2
-          )
+            --region us-east-2)
 
           if [ "$FAILED" -gt 0 ]; then
             echo "::error::Health Check Failed on $FAILED instances"
