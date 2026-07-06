@@ -3,6 +3,7 @@ name: Test Fleet health and Env Variables
 on:
   workflow_call:
 
+
 permissions:
   id-token: write
   contents: read
@@ -10,7 +11,6 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -25,38 +25,36 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters '{"commands":[
               "hostname -I",
-              "docker --version 2>/dev/null || echo DOCKER NOT INSTALLED",
-              "aws --version 2>/dev/null || echo AWS CLI NOT INSTALLED",
+              "docker --version 2>/dev/null  echo DOCKER NOT INSTALLED",
+              "aws --version 2>/dev/null  echo AWS CLI NOT INSTALLED",
               "mysql --version 2>/dev/null || echo MYSQL NOT INSTALLED",
-              "aws ssm get-parameters-by-path --path /application/banking --with-decryption --region us-east-2"
-            ]}' \
-            --query "Command.CommandId" \
+              "aws ssm get-parameters-by-path --path /application/banking --with-decryption --region us-east-2 | grep -E Name"
+              ]}' \
+            --query 'Command.CommandId' \
             --output text \
-            --region us-east-2)
-
-          echo "cmd_id=$CMD_ID" >> "$GITHUB_OUTPUT"
-
+            --region us-east-2
+            )
+          echo "cmd_id=$CMD_ID" >> $GITHUB_OUTPUT
+      
+      
       - name: Show Results
-        run: |
+        run: |  
           sleep 20
-
           aws ssm list-command-invocations \
             --command-id "${{ steps.health.outputs.cmd_id }}" \
             --details \
             --region us-east-2 \
-            --query "CommandInvocations[*].{Instance:InstanceId,Status:Status,Output:CommandPlugins[0].Output}" \
-            --output text
-
+            --output text 
+          
           FAILED=$(aws ssm list-command-invocations \
             --command-id "${{ steps.health.outputs.cmd_id }}" \
-            --details \
             --query "length(CommandInvocations[?Status=='Failed'])" \
             --output text \
-            --region us-east-2)
+            --region us-east-2
+            )
 
-          if [ "$FAILED" -gt 0 ]; then
-            echo "::error::Health Check Failed on $FAILED instances"
-            exit 1
-          fi
+          [ "$FAILED" -gt 0 ] && \
+          echo "::error::Health Check Failed on $FAILED instances" && \
+          exit 1
 
           echo "ALL Instances Healthy ✅"
