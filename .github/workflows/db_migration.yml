@@ -24,6 +24,6 @@ jobs:
       - name: Upload file on S3
         run: |
           aws s3 mb s3://127348474924-devops-scripts --region us-east-2 2>/dev/null || true
-          aws s3 cp init.sql s3://720800607391-devops-scripts/init.sql 
-          aws s3 cp init.py s3://720800607391-devops-scripts/init.py 
+          aws s3 cp init.sql s3://127348474924-devops-scripts/init.sql 
+          aws s3 cp init.py s3://127348474924-devops-scripts/init.py 
           echo "✅ Files Uploaded to bucket.."
