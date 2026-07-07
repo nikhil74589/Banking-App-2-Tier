@@ -2,9 +2,9 @@ import boto3 ,os,sys
 import pymysql
 client=boto3.client('ssm', region_name='us-east-2')
 params={
-    os.pathbasename(p["Name"],p["value"])
+    os.path.basename(p["Name"],p["value"])
     for p in client.get_parameters_by_path(
-        path="/application/banking",
+        Path="/application/banking",
         WithDecryption=True)["parameters"]
 
     
@@ -46,4 +46,4 @@ except Exception as e:
     print("DB ERROR ❌: ",e)
     sys.exit(1)
 
-print("✅ Smoke test Done") #
+print("✅ Smoke test Done") 
