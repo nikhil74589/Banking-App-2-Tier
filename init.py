@@ -19,7 +19,6 @@ try:
         user=get_params("DB_USER"),
         password=get_params("DB_PASSWORD"),
         port=int(get_params("DB_PORT")),
-        database=get_params("DB_NAME"),
         connect_timeout=10,
     )
 
