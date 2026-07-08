@@ -1,7 +1,7 @@
-name: Intializing Database
+name: Initializing Database
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -12,37 +12,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
           repository: nikhil74589/Banking-App-2-Tier
           ref: main
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::127348474924:role/github-action-deploy-role
           aws-region: us-east-2
 
-      - name: Upload file on S3
+      - name: Upload files to S3
         run: |
           aws s3 mb s3://127348474924-devops-scripts --region us-east-2 2>/dev/null || true
+
           aws s3 cp init.sql s3://127348474924-devops-scripts/init.sql
           aws s3 cp init.py s3://127348474924-devops-scripts/init.py
-          echo "✅ Files Uploaded to bucket.."
 
-      - name: Initializing Database on RDS using EC2
+          echo "✅ Files uploaded to bucket"
+
+      - name: Initialize Database on RDS using EC2
         id: init
         run: |
           CMD_ID=$(aws ssm send-command \
             --targets "Key=tag:App,Values=flask" \
             --document-name "AWS-RunShellScript" \
-            --parameters '{
-              "commands":[
-                "aws s3 cp s3://127348474924-devops-scripts/init.py /tmp/init.py",
-                "python3 /tmp/init.py || exit 1",
-                "rm /tmp/init.py"
-              ]
-            }' \
-            --query 'Command.CommandId' \
+            --parameters 'commands=[
+              "aws s3 cp s3://127348474924-devops-scripts/init.py /tmp/init.py",
+              "python3 /tmp/init.py || exit 1",
+              "rm -f /tmp/init.py"
+            ]' \
+            --query "Command.CommandId" \
             --output text \
             --region us-east-2)
 
@@ -64,8 +66,9 @@ jobs:
             --output text \
             --region us-east-2)
 
-          [ "$FAILED" -gt 0 ] && \
-            echo "::error::Database Creation Failed on $FAILED instance(s)!" && \
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::Database creation failed on $FAILED instance(s)!"
             exit 1
+          fi
 
-          echo "✅ Database Created Successfully"
+          echo "✅ Database created successfully"
